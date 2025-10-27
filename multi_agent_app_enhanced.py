@@ -58,7 +58,13 @@ async def invoke_async_streaming(payload):
   "has_references": true/false,
   "search_scope": "大阪市/他の市区町村/日本全体"
 }
-```"""
+```
+
+厳守事項:
+- 出力は純粋なJSONオブジェクト1つのみ。前後に`json`や説明文、コメント、Markdownコードブロックを付けないこと。
+- 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
+- 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
+"""
         )
         
         research_response = ""
@@ -140,6 +146,11 @@ async def invoke_async_streaming(payload):
 }
 ```
 
+厳守事項:
+- 出力は純粋なJSONオブジェクト1つのみ。前後に`json`や説明文、コメント、Markdownコードブロックを付けないこと。
+- 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
+- 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
+
 注意: data_sourceは必ず文字列で記載してください。オブジェクトや配列は使用しないでください。"""
         )
         
@@ -151,6 +162,19 @@ async def invoke_async_streaming(payload):
                 demographics_response += chunk
         
         demographics_data = extract_json(demographics_response)
+        if not demographics_data:
+            # Retry up to 3 times on JSON parse failure
+            for retry_attempt in range(1, 4):
+                yield {"type": "status", "data": f"[ステップ1a] 人口動態データのJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
+                demographics_response = ""
+                async for event in demographics_agent.stream_async(f"市民意見: {user_message}\n\nまず大阪市の人口動態を調査してください。大阪市のデータが不明な場合は他の市区町村や日本全体の統計を使用してください。\n\nデータが存在しない場合は、フェルミ推定で合理的な推定値を算出してください。推定方法をdata_sourceに明記してください。"):
+                    if "data" in event:
+                        chunk = event["data"]
+                        yield {"type": "stream", "step": f"demographics_retry_{retry_attempt}", "data": chunk}
+                        demographics_response += chunk
+                demographics_data = extract_json(demographics_response)
+                if demographics_data:
+                    break
         if not demographics_data:
             yield {"type": "error", "data": "人口動態データの取得に失敗しました"}
             return
@@ -243,7 +267,11 @@ async def invoke_async_streaming(payload):
 }
 ```
 
-注意: JSON項目名は英語、値は日本語で記載してください。
+厳守事項:
+- JSON項目名は英語、値は日本語で記載してください。
+- 出力は純粋なJSONオブジェクト1つのみ。前後に`json`や説明文、コメント、Markdownコードブロックを付けないこと。
+- 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
+- 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
 
 注意: 
 - 施策立案エージェントの1名以上は必ず大阪市行政の立場で考える専門家とする
@@ -261,6 +289,19 @@ async def invoke_async_streaming(payload):
                 sv_response += chunk
         
         agent_defs = extract_json(sv_response)
+        if not agent_defs:
+            # Retry up to 3 times on JSON parse failure
+            for retry_attempt in range(1, 4):
+                yield {"type": "status", "data": f"[ステップ1b] エージェント定義のJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
+                sv_response = ""
+                async for event in sv_agent.stream_async(f"市民意見: {user_message}\n\n人口動態データ:\n{demographics_text}"):
+                    if "data" in event:
+                        chunk = event["data"]
+                        yield {"type": "stream", "step": f"sv_agent_retry_{retry_attempt}", "data": chunk}
+                        sv_response += chunk
+                agent_defs = extract_json(sv_response)
+                if agent_defs:
+                    break
         
         if not agent_defs or len(agent_defs.get("citizen_agents", [])) < 10:
             yield {"type": "error", "data": "エージェント定義の生成に失敗しました（市民エージェントが10名未満）"}
@@ -305,6 +346,11 @@ async def invoke_async_streaming(payload):
 }}
 ```
 
+厳守事項:
+- 出力は純粋なJSONオブジェクト1つのみ。前後に`json`や説明文、コメント、Markdownコードブロックを付けないこと。
+- 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
+- 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
+
 **必須事項**:
 - 上記の全ての項目を必ず含めてください
 - 各項目の説明に従って、具体的かつ詳細に記載してください
@@ -318,6 +364,19 @@ async def invoke_async_streaming(payload):
                 policy_response += chunk
         
         policy_json = extract_json(policy_response)
+        if not policy_json:
+            # Retry up to 3 times on JSON parse failure
+            for retry_attempt in range(1, 4):
+                yield {"type": "status", "data": f"[ステップ2] 施策案のJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
+                policy_response = ""
+                async for event in swarm_agent.stream_async(swarm_prompt):
+                    if "data" in event:
+                        chunk = event["data"]
+                        yield {"type": "stream", "step": f"swarm_retry_{retry_attempt}", "data": chunk}
+                        policy_response += chunk
+                policy_json = extract_json(policy_response)
+                if policy_json:
+                    break
         if not policy_json:
             policy_json = {"raw_text": policy_response}
         
@@ -353,6 +412,11 @@ async def invoke_async_streaming(payload):
 }}
 ```
 
+厳守事項:
+- 出力は純粋なJSONオブジェクト1つのみ。前後に`json`や説明文、コメント、Markdownコードブロックを付けないこと。
+- 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
+- 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
+
 総合スコア = 法令適合性×0.5 + 実現可能性×0.5
 承認基準: 80点以上で承認
 
@@ -366,7 +430,21 @@ async def invoke_async_streaming(payload):
                     yield {"type": "stream", "step": f"reviewer_attempt_{attempt}", "data": chunk}
                     review_response += chunk
             
-            review_result = extract_json(review_response) or {"approved": False, "total_score": 0}
+            review_result = extract_json(review_response)
+            if not review_result:
+                # Retry up to 3 times on JSON parse failure
+                for retry_attempt in range(1, 4):
+                    yield {"type": "status", "data": f"[ステップ3] レビュー応答のJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
+                    review_response = ""
+                    async for event in reviewer_agent.stream_async(review_prompt):
+                        if "data" in event:
+                            chunk = event["data"]
+                            yield {"type": "stream", "step": f"reviewer_attempt_{attempt}_retry_{retry_attempt}", "data": chunk}
+                            review_response += chunk
+                    review_result = extract_json(review_response)
+                    if review_result:
+                        break
+            review_result = review_result or {"approved": False, "total_score": 0}
             
             # 総合スコアを計算（法令適合性50% + 実現可能性50%）
             if "total_score" not in review_result:
@@ -404,6 +482,19 @@ async def invoke_async_streaming(payload):
                         policy_response += chunk
                 
                 improved_policy = extract_json(policy_response)
+                if not improved_policy:
+                    # Retry up to 3 times on JSON parse failure
+                    for retry_attempt in range(1, 4):
+                        yield {"type": "status", "data": f"[ステップ3] 改善施策案のJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
+                        policy_response = ""
+                        async for event in swarm_agent.stream_async(improvement_prompt):
+                            if "data" in event:
+                                chunk = event["data"]
+                                yield {"type": "stream", "step": f"improvement_{attempt}_retry_{retry_attempt}", "data": chunk}
+                                policy_response += chunk
+                        improved_policy = extract_json(policy_response)
+                        if improved_policy:
+                            break
                 if improved_policy:
                     policy_json = improved_policy
                     yield {"type": "policy", "data": {**policy_json, "improved": True, "attempt": attempt}}
@@ -471,6 +562,11 @@ async def invoke_async_streaming(payload):
 }}
 ```
 
+厳守事項:
+- 出力は純粋なJSONオブジェクト1つのみ。前後に`json`や説明文、コメント、Markdownコードブロックを付けないこと。
+- 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
+- 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
+
 必須: 上記の全ての項目を必ず出力してください。あなたは{total_citizens}名の市民エージェントの1人として、必ず評価を完了する責任があります。
 
 総合評価 = 個人影響×0.5 + 家族影響×0.2 + 地域影響×0.1 + 公平性×0.1 + 持続可能性×0.1
@@ -485,6 +581,19 @@ async def invoke_async_streaming(payload):
                         eval_response += chunk
                 
                 evaluation = extract_json(eval_response)
+                if not evaluation:
+                    # Retry up to 3 times on JSON parse failure
+                    for retry_attempt in range(1, 4):
+                        yield {"type": "status", "data": f"[ステップ4] 市民評価のJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
+                        eval_response = ""
+                        async for event in citizen_agent.stream_async(eval_prompt):
+                            if "data" in event:
+                                chunk = event["data"]
+                                yield {"type": "stream", "step": f"citizen_{i}_retry_{retry_attempt}", "data": chunk}
+                                eval_response += chunk
+                        evaluation = extract_json(eval_response)
+                        if evaluation:
+                            break
                 if evaluation:
                     evaluation["is_directly_affected"] = agent_def.get("is_directly_affected", True)
                     citizen_evaluations.append(evaluation)
@@ -545,6 +654,11 @@ async def invoke_async_streaming(payload):
 }}
 ```
 
+厳守事項:
+- 出力は純粋なJSONオブジェクト1つのみ。前後に`json`や説明文、コメント、Markdownコードブロックを付けないこと。
+- 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
+- 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
+
 必須: 
 - ten_year_ratingは100点満点で評価してください。
 - changes_observedには、現在の家族構成から10年後の自然な変化（子供の成長、独立など）を含めてください。
@@ -560,6 +674,19 @@ async def invoke_async_streaming(payload):
                             future_response += chunk
                     
                     future_eval = extract_json(future_response)
+                    if not future_eval:
+                        # Retry up to 3 times on JSON parse failure
+                        for retry_attempt in range(1, 4):
+                            yield {"type": "status", "data": f"[ステップ5] 10年後評価のJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
+                            future_response = ""
+                            async for event in citizen_agent.stream_async(future_prompt):
+                                if "data" in event:
+                                    chunk = event["data"]
+                                    yield {"type": "stream", "step": f"future_{i}_retry_{retry_attempt}", "data": chunk}
+                                    future_response += chunk
+                            future_eval = extract_json(future_response)
+                            if future_eval:
+                                break
                     if future_eval:
                         future_evaluations.append(future_eval)
                         yield {"type": "future_evaluation", "data": future_eval}
@@ -625,6 +752,11 @@ async def invoke_async_streaming(payload):
 }}
 ```
 
+厳守事項:
+- 出力は純粋なJSONオブジェクト1つのみ。前後に`json`や説明文、コメント、Markdownコードブロックを付けないこと。
+- 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
+- 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
+
 重要: total_scoreは必ず以下の計算式で算出してください：
 total_score = equity.score × 0.25 + effectiveness.score × 0.25 + transparency.score × 0.20 + sustainability.score × 0.15 + ethical_acceptability.score × 0.10"""
         )
@@ -682,7 +814,21 @@ total_score = equity.score × 0.25 + effectiveness.score × 0.25 + transparency.
                 yield {"type": "stream", "step": "final_assessment", "data": chunk}
                 final_response += chunk
         
-        final_assessment = extract_json(final_response) or {"total_score": 0}
+        final_assessment = extract_json(final_response)
+        if not final_assessment:
+            # Retry up to 3 times on JSON parse failure
+            for retry_attempt in range(1, 4):
+                yield {"type": "status", "data": f"[ステップ6] 最終評価のJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
+                final_response = ""
+                async for event in final_evaluator.stream_async(final_prompt):
+                    if "data" in event:
+                        chunk = event["data"]
+                        yield {"type": "stream", "step": f"final_assessment_retry_{retry_attempt}", "data": chunk}
+                        final_response += chunk
+                final_assessment = extract_json(final_response)
+                if final_assessment:
+                    break
+        final_assessment = final_assessment or {"total_score": 0}
         yield {"type": "final_assessment", "data": final_assessment}
         
         result_json = {
