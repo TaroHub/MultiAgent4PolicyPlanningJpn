@@ -64,6 +64,8 @@ async def invoke_async_streaming(payload):
 - 出力は純粋なJSONオブジェクト1つのみ。前後に`json`や説明文、コメント、Markdownコードブロックを付けないこと。
 - 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
 - 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
+
+重要：出力では「施策」という用語を使用し、「政策」「事業」という用語は他自治体からの引用時以外は使用しないでください。
 """
         )
         
@@ -280,12 +282,14 @@ async def invoke_async_streaming(payload):
 - 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
 - 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
 
-注意: 
+注意:
 - 施策立案エージェントの1名以上は必ず大阪市行政の立場で考える専門家とする
 - しかし、name欄には「大阪市の」を含めず、一般的な職種名のみ記載する
 - system_promptでは「大阪市の立場から」など具体的な視点を明記する
 - is_directly_affected は施策の直接的な恩恵を受けるかどうかを示します（true=恩恵を受ける、false=恩恵を受けない/関係ない層）
-- 市民エージェントのJSON項目は全て英語で記載すること"""
+- 市民エージェントのJSON項目は全て英語で記載すること
+
+重要：施策立案エージェントの説明や出力では「施策」という用語で統一し、「政策」「事業」という用語は使用しないでください。"""
         )
         
         sv_response = ""
@@ -361,7 +365,9 @@ async def invoke_async_streaming(payload):
 **必須事項**:
 - 上記の全ての項目を必ず含めてください
 - 各項目の説明に従って、具体的かつ詳細に記載してください
-- 文字数目安を参考に、十分な情報量を確保してください"""
+- 文字数目安を参考に、十分な情報量を確保してください
+
+重要：出力JSON内容では「施策」という用語を使用し、「政策」「事業」という用語は参考事例の引用時以外は使用しないでください。"""
         
         policy_response = ""
         async for event in swarm_agent.stream_async(swarm_prompt):
@@ -428,6 +434,7 @@ async def invoke_async_streaming(payload):
 承認基準: 80点以上で承認
 
 重要: overall_assessmentとimprovement_suggestionsは、【】で見出しを付け、箇条書き『・』を使用して読みやすく記載してください。
+レビュー結果では「施策案」「施策内容」として表現し、「政策」「事業」という用語は使用しないでください。
 """
             
             review_response = ""
@@ -579,6 +586,8 @@ async def invoke_async_streaming(payload):
 重要: expectations、concerns、recommendationsは必ず具体的な内容を記載し、「N/A」や「特になし」は使用しないでください。あなたの立場から必ず何らかの期待、懸念、提言があるはずです。
 
 総合評価 = 個人影響×0.5 + 家族影響×0.2 + 地域影響×0.1 + 公平性×0.1 + 持続可能性×0.1
+
+評価コメントでは「この施策」として表現し、「政策」「事業」という用語は使用しないでください。
 """
             
             try:
@@ -668,10 +677,12 @@ async def invoke_async_streaming(payload):
 - 記号はすべて半角で記述し、全角記号（「、」「。」など）は使用しないこと。
 - 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
 
-必須: 
+必須:
 - ten_year_ratingは100点満点で評価してください。
 - changes_observedには、現在の家族構成から10年後の自然な変化（子供の成長、独立など）を含めてください。
 - あなたは{total_citizens}名の市民エージェントの1人として、必ず10年後評価を完了する責任があります。
+
+評価では「施策の長期的効果」として表現し、「政策」「事業」という用語は使用しないでください。
 """
                 
                 try:
@@ -767,7 +778,9 @@ async def invoke_async_streaming(payload):
 - 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
 
 重要: total_scoreは必ず以下の計算式で算出してください：
-total_score = equity.score × 0.25 + effectiveness.score × 0.25 + transparency.score × 0.20 + sustainability.score × 0.15 + ethical_acceptability.score × 0.10"""
+total_score = equity.score × 0.25 + effectiveness.score × 0.25 + transparency.score × 0.20 + sustainability.score × 0.15 + ethical_acceptability.score × 0.10
+
+評価結果では「施策」という用語で統一し、「政策」「事業」という用語は使用しないでください。"""
         )
         
         final_prompt = f"""施策案:
