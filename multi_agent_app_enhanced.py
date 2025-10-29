@@ -657,20 +657,44 @@ async def invoke_async_streaming(payload):
 
 重要: あなたは市民エージェント{i+1}番目（全{total_citizens}名中）です。必ず10年後評価を完了してください。
 
-10年間の変化と現在の評価を述べてください。
+10年後の視点から、以下の5つの観点で施策を評価してください。各項目には100点満点の実数と具体的なコメントを記載してください。
 
 出力形式:
 ```json
 {{
   "evaluator_name": "{agent_def['name']} (10年後)",
   "age_now": {agent_def['age']+10},
-  "ten_year_rating": 75,
-  "changes_observed": "10年間で観察された変化（家族構成の変化も含む）",
-  "long_term_impact": "長期的な影響の評価",
-  "unexpected_outcomes": "予想外の結果",
-  "current_opinion": "現在の意見"
+  "personal_impact": {{"score": 78, "comment": "この施策があなたの生活に与えた10年間の長期的影響（具体的に150文字程度）"}},
+  "family_impact": {{"score": 72, "comment": "この施策があなたの家族に与えた10年間の長期的影響（具体的に150文字程度）"}},
+  "community_impact": {{"score": 82, "comment": "この施策が地域に与えた10年間の長期的影響（具体的に150文字程度）"}},
+  "fairness": {{"score": 75, "comment": "10年経った今、この施策の公平性をどう評価するか（具体的に150文字程度）"}},
+  "sustainability": {{"score": 79, "comment": "実際に10年間続いた施策の持続可能性評価（具体的に150文字程度）"}},
+  "ten_year_rating": 76.3,
+  "changes_observed": "10年間で観察された変化（家族構成の変化も含む、200文字程度）",
+  "long_term_impact": "長期的な影響の評価（150文字程度）",
+  "unexpected_outcomes": "予想外の結果（100文字程度）",
+  "current_opinion": "現在の意見（150文字程度）"
 }}
 ```
+
+評価基準:
+
+1. personal_impact（個人影響）: この施策があなたの生活に与えた10年間の長期的影響
+   - 生活の質の向上度、個人的な恩恵や負担、10年間の変化を総合評価
+
+2. family_impact（家族影響）: この施策があなたの家族に与えた10年間の長期的影響
+   - 家族全体への影響、子供の成長や家族構成変化も考慮した評価
+
+3. community_impact（地域影響）: この施策が地域に与えた10年間の長期的影響
+   - 地域コミュニティの変化、社会基盤の改善、地域活性化の度合い
+
+4. fairness（公平性）: 10年経った今、この施策の公平性をどう評価するか
+   - 特定層への偏り、格差是正効果、長期的な公平性の実現度
+
+5. sustainability（持続可能性）: 実際に10年間続いた施策の持続可能性評価
+   - 財政的継続性、社会的支持、効果の持続性を実体験に基づいて評価
+
+ten_year_rating = (personal_impact.score × 0.5 + family_impact.score × 0.2 + community_impact.score × 0.1 + fairness.score × 0.1 + sustainability.score × 0.1)
 
 厳守事項:
 - 出力は純粋なJSONオブジェクト1つのみ。前後に`json`や説明文、コメント、Markdownコードブロックを付けないこと。
@@ -678,9 +702,13 @@ async def invoke_async_streaming(payload):
 - 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
 
 必須:
-- ten_year_ratingは100点満点で評価してください。
-- changes_observedには、現在の家族構成から10年後の自然な変化（子供の成長、独立など）を含めてください。
-- あなたは{total_citizens}名の市民エージェントの1人として、必ず10年後評価を完了する責任があります。
+- 5つの評価項目（personal_impact, family_impact, community_impact, fairness, sustainability）は整数（0-100）で評価してください
+- ten_year_ratingは上記の計算式で算出された実数（小数点1桁まで）で記載してください
+- 各評価項目は独立して判断し、10年間の実体験に基づいて評価してください
+- あなた固有の視点で評価し、他のエージェントと異なる評価になることが期待されています
+- changes_observedには、現在の家族構成から10年後の自然な変化（子供の成長、独立など）を含めてください
+- あなたは{total_citizens}名の市民エージェントの1人として、必ず10年後評価を完了する責任があります
+- サンプル値（78, 72等）はあくまで例であり、実際の施策効果に基づいて評価してください
 
 評価では「施策の長期的効果」として表現し、「政策」「事業」という用語は使用しないでください。
 """
