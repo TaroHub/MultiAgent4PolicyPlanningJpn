@@ -167,7 +167,10 @@
                     document.getElementById('statusText').textContent = event.data;
                     break;
                 case 'research':
+                    displayResearchResult(event.data);
+                    break;
                 case 'demographics':
+                    displayDemographicsResult(event.data);
                     break;
                 case 'agent_defs':
                     streamData.agentDefs = event.data;
@@ -176,15 +179,11 @@
                 case 'policy':
                     streamData.policy = event.data;
                     streamData.policyHistory.push(event.data);
-                    console.log('Policy added:', event.data);
-                    console.log('Policy history:', streamData.policyHistory);
                     displayHistory();
                     break;
                 case 'review':
                 case 'review_final':
                     streamData.reviewHistory.push(event.data);
-                    console.log('Review added:', event.data);
-                    console.log('Review history:', streamData.reviewHistory);
                     displayHistory();
                     break;
                 case 'evaluation':
@@ -373,6 +372,84 @@
             });
             
             content.innerHTML = html;
+        }
+
+        function displayResearchResult(researchData) {
+            // 事前調査結果セクションを作成または取得
+            let preliminarySection = document.getElementById('preliminarySection');
+            if (!preliminarySection) {
+                const statusSection = document.getElementById('statusSection');
+                preliminarySection = document.createElement('div');
+                preliminarySection.id = 'preliminarySection';
+                preliminarySection.className = 'section';
+                preliminarySection.style.display = 'block';
+                preliminarySection.innerHTML = `
+                    <h2>📊 事前調査結果</h2>
+                    <div id="preliminaryContent"></div>
+                `;
+                statusSection.insertAdjacentElement('afterend', preliminarySection);
+            }
+            
+            // 類似施策調査結果を追加
+            const preliminaryContent = document.getElementById('preliminaryContent');
+            let researchHtml = `
+                <div class="agent-card">
+                    <div class="agent-name">🔍 類似施策調査結果</div>
+                    <div class="agent-profile"><strong>調査範囲:</strong> ${researchData.search_scope || 'N/A'}</div>
+            `;
+            
+            if (researchData.similar_policies && researchData.similar_policies.length > 0) {
+                researchData.similar_policies.slice(0, 2).forEach((policy, index) => {
+                    researchHtml += `<div class="agent-profile"><strong>${policy.municipality || 'N/A'}:</strong> ${policy.policy_name || 'N/A'}</div>`;
+                });
+            } else {
+                researchHtml += '<div class="agent-profile">類似施策事例は見つかりませんでした。</div>';
+            }
+            
+            researchHtml += '</div>';
+            preliminaryContent.innerHTML = researchHtml;
+        }
+
+        function displayDemographicsResult(demographicsData) {
+            // 事前調査結果セクションに人口動態結果を追加
+            const preliminaryContent = document.getElementById('preliminaryContent');
+            if (!preliminaryContent) return;
+            
+            let demographicsHtml = `
+                <div class="agent-card">
+                    <div class="agent-name">📊 人口動態調査結果</div>
+                    <div class="agent-profile"><strong>対象地域:</strong> ${demographicsData.target_area || 'N/A'}</div>
+            `;
+            
+            // 年齢分布
+            if (demographicsData.age_distribution) {
+                const ageEntries = Object.entries(demographicsData.age_distribution).slice(0, 3);
+                const ageText = ageEntries.map(([age, percentage]) => `${age}: ${percentage}%`).join(', ');
+                demographicsHtml += `<div class="agent-profile"><strong>年齢分布:</strong> ${ageText}</div>`;
+            }
+            
+            // 性別比率
+            if (demographicsData.gender_ratio) {
+                const genderText = Object.entries(demographicsData.gender_ratio).map(([gender, percentage]) => {
+                    const genderLabel = gender === 'male' ? '男性' : gender === 'female' ? '女性' : gender;
+                    return `${genderLabel}: ${percentage}%`;
+                }).join(', ');
+                demographicsHtml += `<div class="agent-profile"><strong>性別比率:</strong> ${genderText}</div>`;
+            }
+            
+            // 家族構成
+            if (demographicsData.family_types && demographicsData.family_types.length > 0) {
+                const familyText = demographicsData.family_types.slice(0, 2).map(family => `${family.type}: ${family.percentage}%`).join(', ');
+                demographicsHtml += `<div class="agent-profile"><strong>家族構成:</strong> ${familyText}</div>`;
+            }
+            
+            // データソース
+            if (demographicsData.data_source) {
+                demographicsHtml += `<div class="agent-profile"><strong>データソース:</strong> ${demographicsData.data_source}</div>`;
+            }
+            
+            demographicsHtml += '</div>';
+            preliminaryContent.innerHTML += demographicsHtml;
         }
 
         function displayHistory() {

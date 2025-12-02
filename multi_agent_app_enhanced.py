@@ -1,6 +1,5 @@
-﻿from bedrock_agentcore import BedrockAgentCoreApp
+from bedrock_agentcore import BedrockAgentCoreApp
 from strands import Agent
-from strands_tools import swarm
 import json
 import re
 import asyncio
@@ -45,8 +44,8 @@ async def invoke_async_streaming(payload):
 市民意見に関連する既存の施策事例を調査し、参考になる事例を提示してください。
 
 調査優先順位:
-1. 大阪市の事例を最優先
-2. 大阪市に事例がなければ他の政令指定都市や大阪府内の市区町村
+1. 神戸市の事例を最優先
+2. 神戸市に事例がなければ他の政令指定都市や兵庫県内の市区町村
 3. それでもなければ日本全国の自治体事例
 
 出力形式:
@@ -56,7 +55,7 @@ async def invoke_async_streaming(payload):
     {"municipality": "自治体名", "policy_name": "施策名", "summary": "概要", "results": "成果"}
   ],
   "has_references": true/false,
-  "search_scope": "大阪市/他の市区町村/日本全体"
+  "search_scope": "神戸市/他の市区町村/日本全体"
 }
 ```
 
@@ -70,7 +69,7 @@ async def invoke_async_streaming(payload):
         )
         
         research_response = ""
-        async for event in research_agent.stream_async(f"市民意見: {user_message}\n\nまず大阪市の類似施策事例を調査してください。大阪市に事例がなければ他の市区町村や日本全国の事例を3つ程度調査してください。"):
+        async for event in research_agent.stream_async(f"市民意見: {user_message}\n\nまず神戸市の類似施策事例を調査してください。神戸市に事例がなければ他の市区町村や日本全国の事例を3つ程度調査してください。"):
             if "data" in event:
                 chunk = event["data"]
                 yield {"type": "stream", "step": "research", "data": chunk}
@@ -78,7 +77,16 @@ async def invoke_async_streaming(payload):
         
         research_result = extract_json(research_response) or {"similar_policies": [], "has_references": False}
         yield {"type": "research", "data": research_result}
-        yield {"type": "stream", "step": "research_complete", "data": f"\n\n【調査完了】類似施策: {len(research_result.get('similar_policies', []))}件"}
+        
+        # 類似施策調査結果の詳細表示
+        research_display = f"\n\n【調査完了】類似施策: {len(research_result.get('similar_policies', []))}件\n"
+        if research_result.get('similar_policies'):
+            research_display += "\n=== 類似施策事例 ===\n"
+            for i, policy in enumerate(research_result['similar_policies'][:3], 1):
+                research_display += f"{i}. {policy.get('municipality', 'N/A')}: {policy.get('policy_name', 'N/A')}\n"
+                research_display += f"   概要: {policy.get('summary', 'N/A')[:100]}...\n"
+                research_display += f"   成果: {policy.get('results', 'N/A')[:100]}...\n\n"
+        yield {"type": "stream", "step": "research_complete", "data": research_display}
         
         # ステップ1a: 人口動態調査
         yield {"type": "status", "data": "[ステップ1a] 対象地域の人口動態を調査中..."}
@@ -90,15 +98,24 @@ async def invoke_async_streaming(payload):
 市民意見から対象地域を特定し、その地域の人口動態を調査してください。
 
 調査優先順位:
-1. 大阪市の人口動態を最優先
+1. 神戸市の人口動態を最優先
 2. 市民意見で特定の地域が明示されている場合はその地域
-3. 大阪市のデータが不明な場合は他の政令指定都市や日本全体の統計
+3. 神戸市のデータが不明な場合は他の政令指定都市や日本全体の統計
 
 重要: データが存在しない場合は、フェルミ推定を使用してください。
 - 類似都市のデータから類推
 - 日本全体の統計から地域特性を考慮して補正
 - 人口規模、産業構造、地理的特性から推定
 - 推定方法を必ずdata_sourceに明記すること
+
+言語・文化情報の調査条件:
+市民意見が外国人、多文化、国際化、言語支援、通訳、翻訳などに関連する場合のみ、以下の項目を調査・出力してください：
+- language_distribution
+- japanese_proficiency_levels  
+- cultural_considerations
+- priority_services
+
+関連しない場合は、これらの項目は出力しないでください。
 
 日本語習熟度の判断基準（外国人住民の場合）:
 - fluent (流暢): JLPT N1-N2相当。行政文書の読解、窓口での複雑な相談、就労に支障なし
@@ -125,6 +142,14 @@ async def invoke_async_streaming(payload):
     {"type": "三世代同居", "percentage": 10},
     {"type": "高齢者のみ", "percentage": 10}
   ],
+  "data_source": "データソース（文字列で記載。例: 神戸市統計書2023年版、総務省統計局2022年国勢調査、フェルミ推定による）",
+  "data_scope": "神戸市/他の市区町村/日本全体"
+}
+```
+
+外国人関連の意見の場合は追加で以下も出力:
+```json
+{
   "language_distribution": [
     {"language": "日本語", "percentage": 60, "notes": "備考"},
     {"language": "英語", "percentage": 15, "notes": "主にビジネス層"}
@@ -143,8 +168,8 @@ async def invoke_async_streaming(payload):
     "行政手続きの多言語化（日本語・英語・中国語・ベトナム語）",
     "学校での多文化サポート教員の配置"
   ],
-  "data_source": "データソース（文字列で記載。例: 大阪市統計書2023年版、総務省統計局2022年国勢調査、フェルミ推定による）",
-  "data_scope": "大阪市/他の市区町村/日本全体"
+  "data_source": "データソース（文字列で記載。例: 神戸市統計書2023年版、総務省統計局2022年国勢調査、フェルミ推定による）",
+  "data_scope": "神戸市/他の市区町村/日本全体"
 }
 ```
 
@@ -157,7 +182,7 @@ async def invoke_async_streaming(payload):
         )
         
         demographics_response = ""
-        async for event in demographics_agent.stream_async(f"市民意見: {user_message}\n\nまず大阪市の人口動態を調査してください。大阪市のデータが不明な場合は他の市区町村や日本全体の統計を使用してください。\n\nデータが存在しない場合は、フェルミ推定で合理的な推定値を算出してください。推定方法をdata_sourceに明記してください。"):
+        async for event in demographics_agent.stream_async(f"市民意見: {user_message}\n\nまず神戸市の人口動態を調査してください。神戸市のデータが不明な場合は他の市区町村や日本全体の統計を使用してください。\n\nデータが存在しない場合は、フェルミ推定で合理的な推定値を算出してください。推定方法をdata_sourceに明記してください。"):
             if "data" in event:
                 chunk = event["data"]
                 yield {"type": "stream", "step": "demographics", "data": chunk}
@@ -169,7 +194,7 @@ async def invoke_async_streaming(payload):
             for retry_attempt in range(1, 4):
                 yield {"type": "status", "data": f"[ステップ1a] 人口動態データのJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
                 demographics_response = ""
-                async for event in demographics_agent.stream_async(f"市民意見: {user_message}\n\nまず大阪市の人口動態を調査してください。大阪市のデータが不明な場合は他の市区町村や日本全体の統計を使用してください。\n\nデータが存在しない場合は、フェルミ推定で合理的な推定値を算出してください。推定方法をdata_sourceに明記してください。"):
+                async for event in demographics_agent.stream_async(f"市民意見: {user_message}\n\nまず神戸市の人口動態を調査してください。神戸市のデータが不明な場合は他の市区町村や日本全体の統計を使用してください。\n\nデータが存在しない場合は、フェルミ推定で合理的な推定値を算出してください。推定方法をdata_sourceに明記してください。"):
                     if "data" in event:
                         chunk = event["data"]
                         yield {"type": "stream", "step": f"demographics_retry_{retry_attempt}", "data": chunk}
@@ -181,23 +206,44 @@ async def invoke_async_streaming(payload):
             yield {"type": "error", "data": "人口動態データの取得に失敗しました"}
             return
         yield {"type": "demographics", "data": demographics_data}
+        
+        # 人口動態調査結果の詳細表示
+        demographics_display = f"\n\n【調査完了】対象地域: {demographics_data.get('target_area', '不明')}\n"
+        demographics_display += "\n=== 人口動態データ ===\n"
+        demographics_display += f"年齢分布: {json.dumps(demographics_data.get('age_distribution', {}), ensure_ascii=False)}\n"
+        demographics_display += f"性別比率: {json.dumps(demographics_data.get('gender_ratio', {}), ensure_ascii=False)}\n"
+        
+        family_types = demographics_data.get('family_types', [])
+        if family_types:
+            demographics_display += "\n家族構成:\n"
+            for family in family_types:
+                demographics_display += f"  - {family.get('type', 'N/A')}: {family.get('percentage', 'N/A')}%\n"
+        
+        # 言語・文化情報は外国人関連の意見の場合のみ表示
         language_distribution = demographics_data.get('language_distribution', [])
-        language_summary = ", ".join(
-            f"{entry.get('language', '不明')}: {entry.get('percentage', '?')}%"
-            for entry in language_distribution[:3]
-        ) or "不明"
-        japanese_proficiency = demographics_data.get('japanese_proficiency_levels', {})
-        proficiency_summary = ", ".join(
-            f"{level}: {percentage}%"
-            for level, percentage in japanese_proficiency.items()
-        ) or "不明"
-        yield {"type": "stream", "step": "demographics_complete", "data": (
-            f"\n\n【調査完了】対象地域: {demographics_data.get('target_area', '不明')}"
-            f"\n年齢分布: {json.dumps(demographics_data.get('age_distribution', {}), ensure_ascii=False)}"
-            f"\n性別比率: {json.dumps(demographics_data.get('gender_ratio', {}), ensure_ascii=False)}"
-            f"\n主な言語: {language_summary}"
-            f"\n日本語習熟度: {proficiency_summary}"
-        )}
+        if language_distribution:
+            language_summary = ", ".join(
+                f"{entry.get('language', '不明')}: {entry.get('percentage', '?')}%"
+                for entry in language_distribution[:3]
+            )
+            demographics_display += f"\n主な言語: {language_summary}\n"
+            
+            japanese_proficiency = demographics_data.get('japanese_proficiency_levels', {})
+            if japanese_proficiency:
+                proficiency_summary = ", ".join(
+                    f"{level}: {percentage}%"
+                    for level, percentage in japanese_proficiency.items()
+                )
+                demographics_display += f"日本語習熟度: {proficiency_summary}\n"
+            
+            cultural_considerations = demographics_data.get('cultural_considerations', [])
+            if cultural_considerations:
+                demographics_display += "\n文化的配慮事項:\n"
+                for consideration in cultural_considerations[:2]:
+                    demographics_display += f"  - {consideration.get('group', 'N/A')}: {', '.join(consideration.get('key_points', [])[:2])}\n"
+        
+        demographics_display += f"\nデータソース: {demographics_data.get('data_source', 'N/A')}\n"
+        yield {"type": "stream", "step": "demographics_complete", "data": demographics_display}
         
         # ステップ1b: SVエージェントがエージェント定義を生成（調査した人口動態に基づく）
         yield {"type": "status", "data": "[ステップ1b] エージェント定義を生成中..."}
@@ -221,14 +267,14 @@ async def invoke_async_streaming(payload):
 あなたの役割:
 1. 市民意見の内容を分析
 2. 必要な施策立案エージェントの数と専門分野を決定（目安: 3-5名）
-   - 必ず大阪市行政の視点を持つエージェントを1名以上含める
+   - 必ず神戸市行政の視点を持つエージェントを1名以上含める
    - 必ず予算管理専門家を1名含める（施策立案エージェントの1人として）
-   - ただし、name欄には「大阪市の」を付けず、一般的な職種名や専門分野名のみ記載
+   - ただし、name欄には「神戸市の」を付けず、一般的な職種名や専門分野名のみ記載
 3. 市民評価エージェントを最低10名設定（提供された人口動態データに基づく）
 
 施策立案エージェントのエージェント名ルール:
 - 良い例: "施策企画担当者", "福祉施策専門家", "都市計画コンサルタント", "DX推進専門家", "予算管理専門家"
-- 悪い例: "大阪市の福祉局担当者", "大阪市の都市整備局職員" （具体的な部署名は避ける）
+- 悪い例: "神戸市の福祉局担当者", "神戸市の都市整備局職員" （具体的な部署名は避ける）
 
 予算見積エージェントの設計ルール:
 - 名前: "予算管理専門家" または "財政分析専門家"
@@ -259,7 +305,7 @@ async def invoke_async_streaming(payload):
       "age": 30,
       "gender": "女性",
       "occupation": "保育士",
-      "residence": "大阪市東成区",
+      "residence": "神戸市中央区",
       "family": "共働き・子2人",
       "values": "地域とのつながりを重視",
       "stance": "強く賛成",
@@ -283,9 +329,9 @@ async def invoke_async_streaming(payload):
 - 各キーは1回だけ出力し、余計なコメントや重複キーを含めないこと。
 
 注意:
-- 施策立案エージェントの1名以上は必ず大阪市行政の立場で考える専門家とする
-- しかし、name欄には「大阪市の」を含めず、一般的な職種名のみ記載する
-- system_promptでは「大阪市の立場から」など具体的な視点を明記する
+- 施策立案エージェントの1名以上は必ず神戸市行政の立場で考える専門家とする
+- しかし、name欄には「神戸市の」を含めず、一般的な職種名のみ記載する
+- system_promptでは「神戸市の立場から」など具体的な視点を明記する
 - is_directly_affected は施策の直接的な恩恵を受けるかどうかを示します（true=恩恵を受ける、false=恩恵を受けない/関係ない層）
 - 市民エージェントのJSON項目は全て英語で記載すること
 
@@ -324,20 +370,19 @@ async def invoke_async_streaming(payload):
         
         yield {"type": "agent_defs", "data": agent_defs}
         
-        # ステップ2: Swarmで施策立案（類似施策を参考に）
-        yield {"type": "status", "data": "[ステップ2] 施策立案エージェントが協調実行中..."}
+        # ステップ2: 施策立案（類似施策を参考に）
+        yield {"type": "status", "data": "[ステップ2] 施策立案エージェントが実行中..."}
         
         reference_text = ""
         if research_result.get("has_references"):
             reference_text = f"\n\n参考事例:\n{json.dumps(research_result['similar_policies'], ensure_ascii=False, indent=2)}\n上記事例を参考にしてください。"
         
-        swarm_agent = Agent(
+        policy_agent = Agent(
             model="us.anthropic.claude-sonnet-4-20250514-v1:0",
-            tools=[swarm],
             callback_handler=None
         )
         
-        swarm_prompt = f"""以下のエージェント定義に基づいてswarmを作成し、市民意見「{user_message}」に対する施策案をJSON形式で作成してください。
+        policy_prompt = f"""以下のエージェント定義を参考に、市民意見「{user_message}」に対する施策案をJSON形式で作成してください。
 
 エージェント定義:
 {json.dumps(agent_defs['policy_agents'], ensure_ascii=False, indent=2)}
@@ -370,10 +415,10 @@ async def invoke_async_streaming(payload):
 重要：出力JSON内容では「施策」という用語を使用し、「政策」「事業」という用語は参考事例の引用時以外は使用しないでください。"""
         
         policy_response = ""
-        async for event in swarm_agent.stream_async(swarm_prompt):
+        async for event in policy_agent.stream_async(policy_prompt):
             if "data" in event:
                 chunk = event["data"]
-                yield {"type": "stream", "step": "swarm", "data": chunk}
+                yield {"type": "stream", "step": "policy", "data": chunk}
                 policy_response += chunk
         
         policy_json = extract_json(policy_response)
@@ -382,10 +427,10 @@ async def invoke_async_streaming(payload):
             for retry_attempt in range(1, 4):
                 yield {"type": "status", "data": f"[ステップ2] 施策案のJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
                 policy_response = ""
-                async for event in swarm_agent.stream_async(swarm_prompt):
+                async for event in policy_agent.stream_async(policy_prompt):
                     if "data" in event:
                         chunk = event["data"]
-                        yield {"type": "stream", "step": f"swarm_retry_{retry_attempt}", "data": chunk}
+                        yield {"type": "stream", "step": f"policy_retry_{retry_attempt}", "data": chunk}
                         policy_response += chunk
                 policy_json = extract_json(policy_response)
                 if policy_json:
@@ -489,7 +534,7 @@ async def invoke_async_streaming(payload):
 改善提案に基づいて施策案を修正してください。出力形式は元の施策案と同じJSON形式です。"""
                 
                 policy_response = ""
-                async for event in swarm_agent.stream_async(improvement_prompt):
+                async for event in policy_agent.stream_async(improvement_prompt):
                     if "data" in event:
                         chunk = event["data"]
                         yield {"type": "stream", "step": f"improvement_{attempt}", "data": chunk}
@@ -501,7 +546,7 @@ async def invoke_async_streaming(payload):
                     for retry_attempt in range(1, 4):
                         yield {"type": "status", "data": f"[ステップ3] 改善施策案のJSON解析に失敗。再試行中... ({retry_attempt}/3)"}
                         policy_response = ""
-                        async for event in swarm_agent.stream_async(improvement_prompt):
+                        async for event in policy_agent.stream_async(improvement_prompt):
                             if "data" in event:
                                 chunk = event["data"]
                                 yield {"type": "stream", "step": f"improvement_{attempt}_retry_{retry_attempt}", "data": chunk}

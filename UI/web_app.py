@@ -7,7 +7,7 @@ import uuid
 
 app = Flask(__name__)
 
-AGENT_ARN = os.environ.get('AGENT_ARN', 'arn:aws:bedrock-agentcore:us-west-2:047786098634:runtime/multi_agent_app_enhanced-6tKJtDDS6F')
+AGENT_ARN = os.environ.get('AGENT_ARN', 'arn:aws:bedrock-agentcore:us-west-2:977098991051:runtime/multi_agent_app_enhanced-vJX3s5AHpw')
 REGION = os.environ.get('AWS_REGION', 'us-west-2')
 
 @app.route('/')

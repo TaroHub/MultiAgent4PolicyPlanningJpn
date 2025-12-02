@@ -1,60 +1,54 @@
 default_agent: multi_agent_app_enhanced
 agents:
-  multi_agent_app:
-    name: multi_agent_app
-    entrypoint: multi_agent_app.py
-    platform: linux/arm64
-    container_runtime: none
-    aws:
-      execution_role: arn:aws:iam::047786098634:role/municipal-policy-ai-agentcore-role
-      execution_role_auto_create: true
-      account: 047786098634
-      region: us-west-2
-      ecr_repository: 047786098634.dkr.ecr.us-west-2.amazonaws.com/bedrock-agentcore-multi_agent_app
-      ecr_auto_create: false
-      network_configuration:
-        network_mode: PUBLIC
-      protocol_configuration:
-        server_protocol: HTTP
-      observability:
-        enabled: true
-    bedrock_agentcore:
-      agent_id: multi_agent_app-grDIat649D
-      agent_arn: arn:aws:bedrock-agentcore:us-west-2:047786098634:runtime/multi_agent_app-grDIat649D
-      agent_session_id: 7cb58654-75b2-4bca-bbb9-2d1317bce15a
-    codebuild:
-      project_name: bedrock-agentcore-multi_agent_app-builder
-      execution_role: arn:aws:iam::047786098634:role/AmazonBedrockAgentCoreSDKCodeBuild-us-west-2-8e6aba1f5a
-      source_bucket: bedrock-agentcore-codebuild-sources-047786098634-us-west-2
-    authorizer_configuration: null
-    request_header_configuration: null
-    oauth_configuration: null
   multi_agent_app_enhanced:
     name: multi_agent_app_enhanced
-    entrypoint: multi_agent_app_enhanced.py
+    entrypoint: C:/Users/yuya.adachi/OneDrive - Accenture/Desktop/source/AgentCore/MultiAgent4PolicyPlanningJpn/multi_agent_app_enhanced.py
+    deployment_type: container
+    runtime_type: null
     platform: linux/arm64
     container_runtime: none
+    source_path: C:\Users\yuya.adachi\OneDrive - Accenture\Desktop\source\AgentCore\MultiAgent4PolicyPlanningJpn
     aws:
-      execution_role: arn:aws:iam::047786098634:role/municipal-policy-ai-agentcore-role
+      execution_role: arn:aws:iam::977098991051:role/AmazonBedrockAgentCoreSDKRuntime-us-west-2-1481d7f0cd
       execution_role_auto_create: true
-      account: 047786098634
+      account: '977098991051'
       region: us-west-2
-      ecr_repository: 047786098634.dkr.ecr.us-west-2.amazonaws.com/bedrock-agentcore-multi_agent_app
+      ecr_repository: 977098991051.dkr.ecr.us-west-2.amazonaws.com/bedrock-agentcore-multi_agent_app_enhanced
       ecr_auto_create: false
+      s3_path: null
+      s3_auto_create: false
       network_configuration:
         network_mode: PUBLIC
+        network_mode_config: null
       protocol_configuration:
         server_protocol: HTTP
       observability:
         enabled: true
+      lifecycle_configuration:
+        idle_runtime_session_timeout: null
+        max_lifetime: null
     bedrock_agentcore:
-      agent_id: multi_agent_app_enhanced-6tKJtDDS6F
-      agent_arn: arn:aws:bedrock-agentcore:us-west-2:047786098634:runtime/multi_agent_app_enhanced-6tKJtDDS6F
+      agent_id: multi_agent_app_enhanced-vJX3s5AHpw
+      agent_arn: arn:aws:bedrock-agentcore:us-west-2:977098991051:runtime/multi_agent_app_enhanced-vJX3s5AHpw
       agent_session_id: null
     codebuild:
       project_name: bedrock-agentcore-multi_agent_app_enhanced-builder
-      execution_role: arn:aws:iam::047786098634:role/AmazonBedrockAgentCoreSDKCodeBuild-us-west-2-1481d7f0cd
-      source_bucket: bedrock-agentcore-codebuild-sources-047786098634-us-west-2
+      execution_role: arn:aws:iam::977098991051:role/AmazonBedrockAgentCoreSDKCodeBuild-us-west-2-1481d7f0cd
+      source_bucket: bedrock-agentcore-codebuild-sources-977098991051-us-west-2
+    memory:
+      mode: STM_AND_LTM
+      memory_id: multi_agent_app_enhanced_mem-nTLlVh9h7l
+      memory_arn: null
+      memory_name: multi_agent_app_enhanced_memory
+      event_expiry_days: 30
+      first_invoke_memory_check_done: false
+      was_created_by_toolkit: false
+    identity:
+      credential_providers: []
+      workload: null
     authorizer_configuration: null
     request_header_configuration: null
     oauth_configuration: null
+    api_key_env_var_name: null
+    api_key_credential_provider_name: null
+    is_generated_by_agentcore_create: false
